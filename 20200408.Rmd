@@ -156,7 +156,7 @@ fromJSON("https://www.dropbox.com/s/qnm9bnz7vccrvcz/taipeiNightMarkets.json?dl=1
 
 ### 練習
 ```{r}
-taipeiNightMarkets[c(1,3,14)]
+str(taipeiNightMarkets[c(1,3,14)])
 ```
 
 ### 用「要/不要」邏輯向量選[c(T,T,F,...)]
@@ -257,7 +257,12 @@ gender[econOnly]
 
 econFemaleOnly <- gender[econOnly][c(T,T,F)]; econFemaleOnly
 
-names[econFemaleOnly]
+names[econOnly][c(T,T,F)]
+```
+
+```{r}
+get1$`108-1`[[1]]$teacher
+get2$`學期`$`108-1`[[1]]$teacher
 ```
 
 
