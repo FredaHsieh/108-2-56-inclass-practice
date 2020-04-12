@@ -198,6 +198,44 @@ as.integer(majors10_factor)
 levels(majors10_factor)
 ```
 
+```{r}
+stringInteger <- c("1","2","-11")
+class(stringInteger) # 無法進行數值運算
+stringInteger+2
+```
+
+```{r}
+trueInteger <- as.integer(stringInteger)
+class(trueInteger) # 可以進行數值運算
+typeof(trueInteger)
+trueInteger+2
+```
+
+```{r}
+char3 <- c("小明","1","3")
+as.integer(char3)
+```
+
+```{r}
+as.integer(stringInteger)
+class(stringInteger)
+```
+
+```{r}
+stringInteger <- as.integer(stringInteger)
+class(stringInteger)
+```
+
+```{r}
+studentId <- c(410773002, 410773015)
+```
+
+```{r}
+class(studentId)
+studentID <- as.character(studentId)
+class(studentID)
+```
+
 
 
 ## R Markdown
