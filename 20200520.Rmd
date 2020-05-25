@@ -206,6 +206,378 @@ map(chr, ~str_extract_all(.x, "[ad]"))
 
 ## 4.8.2 綜合練習
 
+1.
+新北市公車路線清單
+
+```{r}
+jsonlite::fromJSON("https://data.ntpc.gov.tw/api/datasets/0EE4E6BF-CEE6-4EC8-8FE1-71F544015127/json/preview", simplifyDataFrame = F) -> busRoutes
+```
+
+請抓出每條路線的Id(路線代碼)、providerId(業者代碼)、providerName(業者中文名稱)、nameZh(中文名稱)。
+
+```{r}
+map(busRoutes, ~.x$Id)
+map(busRoutes, ~.x$providerId)
+map(busRoutes, ~.x$providerName)
+map(busRoutes, ~.x$nameZh)
+```
+
+2.
+一般天氣預報-今明36小時天氣預報:
+
+欄位說明： https://opendata.cwb.gov.tw/opendatadoc/MFC/ForecastElement.pdf
+
+```{r}
+jsonlite::fromJSON("https://opendata.cwb.gov.tw/fileapi/v1/opendataapi/F-C0032-001?Authorization=rdec-key-123-45678-011121314&format=JSON") ->
+  weather_next36hours
+```
+
+2.1 找出有氣象預報資訊的縣市名稱（locationName欄位）
+
+```{r}
+weather_next36hours$cwbopendata$dataset$location$locationName
+```
+
+
+2.2 氣象局針對每個縣市提供了不同氣象因子在未來三個時段的預報。每個都市的氣象因子預報有那些，以第一個都市為例，它存在
+
+```{r}
+weather_next36hours$cwbopendata$dataset$location$weatherElement[[1]]$elementName 
+```
+
+請取出每個縣市有提供的氣象預報因子名稱。（個別名稱的意思要去看欄位說明文件）
+
+```{r}
+map(weather_next36hours$cwbopendata$dataset$location$weatherElement, ~.x$elementName)
+```
+
+2.3 請抓出每縣市在第一個預告時段的
+
+預告開始時間
+
+預告結束時間
+
+這段時間的最高氣溫
+
+```{r}
+map(weather_next36hours$cwbopendata$dataset$location$weatherElement, ~.x$time[[1]]$startTime)
+map(weather_next36hours$cwbopendata$dataset$location$weatherElement, ~.x$time[[1]]$endTime)
+map(weather_next36hours$cwbopendata$dataset$location$weatherElement, ~max(as.integer(.x$time[[1]]$parameter$parameterValue)))
+```
+
+## 5.1 Pipe
+
+範例1
+
+```{r}
+threeHeigths <- c(Gary=178, John=182, Cam=175)
+```
+
+找出身高最高的人：
+
+先排序由大到小，
+
+接著取出第一個位置的人名
+
+寫法一
+
+```{r}
+# 先排序由大到小，
+sort(threeHeigths, decreasing=T) -> sorted_heights
+
+# 把排好的人名取出
+names(sorted_heights) -> sorted_persons
+
+# 接著取出第一個位置的人名
+sorted_persons[[1]] -> highestPerson
+```
+
+寫法二 有些同學會寫成
+
+```{r}
+names(sort(threeHeigths, decreasing = T))[[1]] -> highestPerson
+```
+
+寫法一可看出清楚的思路由左到右很符合人類寫作習慣，但會創出中間物件（sorted_heights），如果步驟一多會出現很多中間物件。 寫法二不會有中間物件，卻很不直覺
+
+```{r}
+library(magrittr)
+```
+
+可將寫法一變成串接無中間物件的方式：
+
+```{r}
+sort(threeHeigths, decreasing=T) %>% 
+names(.) %>%
+.[[1]] -> highestPerson
+```
+
+把 -> 中間物件 換成%>%
+
+再把其他有用到中間物件的位置換成.
+
+這樣概念就叫pipe operation.
+
+## 5.1.1 原則
+
+Pipe原則：
+
+```{r}
+f(w) -> x
+g(x) -> y
+h(y) -> z
+```
+
+可寫成
+
+```{r}
+f(w) %>%
+  g(.) %>% 
+  h(.) -> z
+```
+
+你也可以把w提出來。（想成是透過一個identity function I(.) 得到I(w)值才接到f(.)裡。）
+
+```{r}
+w %>%
+  f(.) %>%
+  g(.) %>%
+  h(.) -> z
+```
+
+%>% 把左邊產生的output，接過去成為下一段函數的input
+
+範例2
+
+```{r}
+# 由cities創出每個元素對應的北部、東部、中部region factor
+cities <- factor(c("台北","花蓮","台東","台中"))
+levels(cities)
+```
+
+```{r}
+region <- cities
+
+library(stringr)
+
+# 以下為一連串的pipe operation
+levels(region) -> currentLevels
+str_replace(currentLevels,"台北","北部") -> currentLevels1
+str_replace(currentLevels1,"花蓮|台東","東部") -> currentLevels2
+str_replace(currentLevels2,"台中","中部") -> regionLevels
+regionLevels -> levels(region)
+```
+
+```{r}
+levels(region) %>% 
+  str_replace(.,"台北","北部") %>%
+  str_replace(.,"花蓮|台東","東部") %>%
+  str_replace(.,"台中","中部") ->
+  levels(region) # %>%只能串接到函數裡面當input，無法直接當作一個獨立物件
+```
+
+## 5.1.2 元素粹取
+
+其實元素粹取符號$,[],[[]]也是函數, 要被取出元素的物件是第一個input，而取元素的位置資訊則是第二個input。
+
+example$name
+example是第一個input，而name是第二個input。
+
+```{r}
+num <- c(2,97,22,15,7)
+
+# 選出大於50的數字
+(num > 50) -> pick_big
+num[pick_big]
+```
+
+```{r}
+(num > 50) %>%
+  num[.]
+```
+
+## 5.1.3 執行順序
+
+R在面對pipe時會先把pipe走完最後才去做值assign給最後物件的動作，例如：
+
+```{r}
+threeHeights %>%
+  .sort(., decreasing=T) %>%
+  names(.) %>%
+  .[[1]] -> highestPerson
+```
+
+pipe部份為
+
+.sort(threeHeigths, decreasing=T) %>%
+names(.) %>%
+.[[1]]
+最後才去做值assign給最後物件的動作，（即->或<-最後進行），所以上面也可以使用左箭頭成為
+
+highestPerson <- 
+  threeHeights %>%
+  .sort(., decreasing=T) %>%
+  names(.) %>%
+  .[[1]]
+
+## 5.1.4 .省略原則
+
+若代表中間物件的.在函數的「第一位」則.*可省略不寫，連它後面的,也去掉。小心若不在第一位則不可做省略.動作。
+
+```{r}
+levels(region) %>%
+  str_replace(.,"台北","北部") %>%
+  str_replace(.,"花蓮|台東","東部") %>%
+  str_replace(.,"台中","中部") ->
+  levels(region)
+```
+
+可改成
+
+```{r}
+levels(region) %>% 
+  str_replace("台北","北部") %>%
+  str_replace("花蓮|台東","東部") %>%
+  str_replace("台中","中部") -> 
+  levels(region)
+```
+
+要小心%>%是將左邊output放到右邊函數，這裡的右邊函數指的是最外圍的函數：
+
+```{r}
+# 資料
+population <- c(`cityA`=500,`cityB`=1500, `cityC`=399)
+cities <- c("cityA","cityA","cityB","cityB","cityC")
+
+# 分析步驟
+names(sort(population)) -> setLevels
+factor(cities, levels = setLevels) -> cities 
+```
+
+分析步驟你可能會寫
+
+```{r}
+population %>% 
+  names(sort(.)) %>%
+  factor(cities, levels=.) -> cities
+```
+
+會有錯誤源自於
+
+```{r}
+population %>% names(sort(.)) # 只能串接到一個函數，不能串接到疊代函數
+```
+
+%>%是把population放到names()的input裡，而非sort()，但names()的input位置已被sort佔走。要改成
+
+```{r}
+population %>%
+  sort() %>%
+  names() %>%
+  factor(cities, levels=.) -> cities
+```
+
+## 5.1.5 串接非單純函數程序
+
+若遇到pipe 串接的下一段並不是單純的函數的話，可以用{}把此段內容括起來並把中間物件要放的位置換成.。
+
+範例3
+
+```{r}
+dataList <- list(
+  num=c(2,97,22,15,7),
+  chr=c("2","97","22","15","7")
+)
+```
+
+找出dataList中元素class為numeric裡那些大於50的數字
+
+```{r}
+library(purrr)
+
+map(dataList, is.numeric) -> results # p.s
+unlist(results) -> pick_numeric # name vector
+
+dataList[pick_numeric] -> num_element
+(num_element[[1]] > 50) -> pick_big
+num_element[[1]][pick_big] -> bigNumber
+```
+
+p.s
+```{r}
+is.numeric(dataList[[1]])
+is.numeric(dataList[[2]])
+map(dataList, ~ is.numeric(.x))
+```
+
+```{r}
+map(dataList, is.numeric) %>%
+unlist(.) %>%
+
+dataList[.] %>%
+{(.[[1]] > 50)} %>%
+num_element[[1]][.] -> bigNumber
+```
+
+5.1.5.0.0.1 範例4
+
+```{r}
+population %>% 
+  names(sort(.)) %>%
+  factor(cities, levels=.) -> cities
+```
+
+```{r}
+population %>% 
+  {names(sort(.))} %>%
+  factor(cities, levels=.) -> cities
+```
+
+## 5.1.6 綜合練習
+
+1.
+
+```{r}
+jsonlite::fromJSON("https://od.cdc.gov.tw/eic/Day_Confirmation_Age_County_Gender_19CoV.json") -> covid19
+
+jsonlite::fromJSON(
+  "https://www.dropbox.com/s/jckqryeh5zeat5w/regionPopulation.json?dl=1"
+) -> population
+unlist(population) -> population
+```
+
+下面程式碼來自4.7節示範如何依人口大小排序設資料縣市factor的levels順序。請以pipe operator改寫它，能串得越多句程式碼越好。
+
+```{r}
+covid19$`縣市` <- factor(covid19$`縣市`)
+
+levels(covid19$`縣市`) -> levelsInData
+population[levelsInData] -> population
+
+population <- sort(population, decreasing=T)
+population
+
+newLevels <- names(population)
+newLevels
+
+covid19$`縣市` <-
+  factor(
+    covid19$`縣市`, levels=newLevels
+  )
+
+levels(covid19$`縣市`)
+```
+
+```{r}
+covid19$`縣市` %>%
+  factor() %>%
+  levels() %>%
+  population[.] %>%
+  sort(., decreasing = T) %>%
+  names() %>%
+  factor(covid19$`縣市`, levels = .) %>%
+  levels(.)
+```
 
 
 
