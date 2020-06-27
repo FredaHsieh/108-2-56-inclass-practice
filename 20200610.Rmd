@@ -167,6 +167,27 @@ askSilly_weather <- function(locationInput,dateInput){
 }
 ```
 
+```{r}
+askSilly_weather <- function(locationInput,dateInput){
+  if(!require("jsonlite")){install.packages("jsonlite")}
+  if(str_detect(locationInput,"台")){str_replace(locationInput,"台|臺") -> locationInput}
+  jsonlite::fromJSON("https://opendata.cwb.gov.tw/fileapi/v1/opendataapi/F-C0032-001?Authorization=rdec-key-123-45678-011121314&format=JSON") ->
+  weather_next36hours
+
+  (weather_next36hours$cwbopendata$dataset$location$locationName == locationInput) -> pick_location
+
+  weather_next36hours$cwbopendata$dataset$location$weatherElement[pick_location][[1]] -> weatherAtLocation
+  (weatherAtLocation$elementName=="MaxT") ->
+    pick_MaxT
+  (weatherAtLocation$elementName=="MinT") ->
+    pick_MinT
+  weatherAtLocation$time[pick_MaxT][[1]]$parameter$parameterName[[1]] -> maxT
+  weatherAtLocation$time[pick_MinT][[1]]$parameter$parameterName[[1]] -> minT
+
+  glue::glue("{locationInput} {dateInput} 氣溫，最高{maxT}度，最低{minT}度。")
+}
+```
+
 不重覆下載
 
 ```{r}
@@ -209,6 +230,7 @@ askSilly_weather2 <- function(locationInput,dateInput){
 ```
 
 ```{r}
+library(lubridate)
 system.time(
   askSilly_weather("新北市",today())
 )
@@ -264,6 +286,15 @@ as.logical(n %% 2) # 只有0會變F，其他數值都是T
 ```
 
 if…else…組合：
+
+```{r}
+n <- 54
+if(n %% 2 == 1){
+  fvalue <- -(n+1)/2
+} else {
+  fvalue <- n/2
+}
+```
 
 ```{r}
 n <- 54
